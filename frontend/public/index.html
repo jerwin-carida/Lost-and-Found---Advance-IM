@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Campus Lost & Found Hub</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <header class="bar">
+    <a class="brand" href="/"><i></i>PLV Lost &amp; Found Hub</a>
+    <nav><a class="link" href="/login">Staff login</a></nav>
+  </header>
+  <main>
+    <section class="hero">
+      <h1>Lost something on campus? Start here.</h1>
+      <p>Everything handed in to the hub desk is listed below. Find your item, send a claim, and bring your school ID at the time you choose.</p>
+    </section>
+    <div class="finder">
+      <input type="search" id="q" placeholder="Search by description, e.g. bottle, keys" aria-label="Search items">
+      <div class="chips" id="chips">
+        <button class="chip" data-status="" aria-pressed="true">All</button>
+        <button class="chip" data-status="found" aria-pressed="false">Found at hub</button>
+        <button class="chip" data-status="lost" aria-pressed="false">Reported lost</button>
+        <button class="chip" data-status="forgotten" aria-pressed="false">Unclaimed</button>
+      </div>
+    </div>
+    <div class="grid" id="grid" aria-live="polite"></div>
+  </main>
+
+  <dialog id="claimDialog">
+    <form id="claimForm">
+      <h2>Claim this item</h2>
+      <p class="meta" id="claimItem"></p>
+      <label>Your full name <input name="name" required maxlength="100" autocomplete="name"></label>
+      <label>Phone, email or student ID <input name="contact" required maxlength="150"></label>
+      <label>When can you pick it up? <input type="datetime-local" name="proposedSchedule" required></label>
+      <p class="err" id="claimErr" role="alert"></p>
+      <div class="actions">
+        <button type="button" class="btn alt" id="cancelClaim">Cancel</button>
+        <button class="btn">Send claim</button>
+      </div>
+    </form>
+  </dialog>
+  <script type="module" src="/js/public.js"></script>
+</body>
+</html>
