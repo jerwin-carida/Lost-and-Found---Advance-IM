@@ -4,7 +4,7 @@ import { pools, poolFor, withTx } from '../db.js';
 import { encrypt, tryDecrypt } from '../crypto.js';
 import { authenticate, requireRole } from '../auth.js';
 import { approveClaim, rejectClaim } from '../services/claims.js';
-import { HttpError, camel, clean, int } from '../util.js';
+import { HttpError, camel, clean, int, buildDescription, ITEM_SIZES, ITEM_COLORS } from '../util.js';
 import demo from './demo.js';
 
 const r = Router();
@@ -62,6 +62,8 @@ r.patch('/claims/:id/reject', async (req, res) => {
 });
 
 // ---------- Items ----------
+r.get('/item-options', (req, res) => res.json({ sizes: ITEM_SIZES, colors: ITEM_COLORS }));
+
 r.get('/items', async (req, res) => {
   const where = [NOT_SEED];
   const params = [];
@@ -81,8 +83,7 @@ r.get('/items', async (req, res) => {
 
 // Log a lost item (someone reported it missing at the desk).
 r.post('/items', async (req, res) => {
-  const description = clean(req.body?.description, 255);
-  if (!description) throw new HttpError(400, 'Describe the item.');
+  const description = buildDescription(req.body);   // size + color + item
   const id = await withTx(pool(req), async (c) => {
     const { rows } = await c.query(`INSERT INTO items (description, status) VALUES ($1, 'lost') RETURNING itemId`, [description]);
     await c.query(`INSERT INTO log (itemId, code) VALUES ($1, 'lost')`, [rows[0].itemid]);
@@ -132,10 +133,10 @@ r.delete('/items/:id', requireRole('admin'), async (req, res) => {
 // ---------- Deposits & transaction history ----------
 r.post('/transactions', async (req, res) => {
   const b = req.body ?? {};
-  const description = clean(b.description, 255);
+  const description = buildDescription(b);   // size + color + item
   const name = clean(b.personName, 100);
   const contact = clean(b.personContact, 150);
-  if (!description || !name || !contact) throw new HttpError(400, 'Describe the item and record who handed it in.');
+  if (!name || !contact) throw new HttpError(400, 'Record who handed the item in.');
   const n = encrypt(name);
   const c2 = encrypt(contact);
   const id = await withTx(pool(req), async (c) => {
