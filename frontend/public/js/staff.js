@@ -143,15 +143,21 @@ async function users() {
   const list = await api(`${S}/users`);
   panel.innerHTML = `<div class="two"><div>
       <h2>Staff accounts</h2>
-      <div class="table-wrap"><table><tr><th>Name</th><th>Role</th><th>Contact (decrypted)</th></tr>
-      ${list.map((u) => `<tr><td>${esc(u.name)}</td><td>${esc(u.role)}</td><td>${esc(u.contact)}</td></tr>`).join('')}</table></div></div>
+      <div class="table-wrap"><table><tr><th>Name</th><th>Role</th><th>Contact (decrypted)</th><th></th></tr>
+      ${list.map((u) => `<tr><td>${esc(u.name)}</td><td>${esc(u.role)}</td><td>${esc(u.contact)}</td>
+        <td>${u.userId === me.userId ? '<span class="meta">You</span>' : `<button class="btn bad small" data-del="${u.userId}" data-name="${esc(u.name)}">Delete</button>`}</td></tr>`).join('')}</table></div></div>
     <form class="card" id="newUser"><h2>Add staff account</h2>
       <label>Name <input name="name" required maxlength="50"></label>
       <label>Password (6+ characters) <input type="password" name="password" required minlength="6"></label>
       <label>Contact <input name="contact" required maxlength="150"></label>
       <label>Role <select name="role"><option>moderator</option><option>admin</option></select></label>
       <button class="btn">Create account</button></form></div>`;
-  panel.onclick = panel.onchange = null;
+  panel.onchange = null;
+  panel.onclick = (e) => {
+    const b = e.target.closest('button[data-del]'); if (!b) return;
+    if (!confirm(`Delete the account "${b.dataset.name}"? This cannot be undone.`)) return;
+    act(b, async () => { await api(`${S}/users/${b.dataset.del}`, { method: 'DELETE' }); toast('Account deleted.'); users(); });
+  };
   panel.onsubmit = (e) => {
     e.preventDefault();
     act(e.target.querySelector('button'), async () => { await api(`${S}/users`, { method: 'POST', body: bodyOf(e.target) }); toast('Account created.'); users(); });

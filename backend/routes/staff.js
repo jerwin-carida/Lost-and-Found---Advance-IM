@@ -10,6 +10,17 @@ import demo from './demo.js';
 const r = Router();
 r.use(authenticate, requireRole('admin', 'moderator'));   // everything below needs a staff session
 
+// A login cookie stays valid for 8 hours, so also confirm the account still exists.
+// This makes a deleted account lose access immediately.
+r.use(async (req, res, next) => {
+  const { rowCount } = await pools.admin.query('SELECT 1 FROM users WHERE userId = $1', [req.user.userId]);
+  if (!rowCount) {
+    res.clearCookie('token');
+    return res.status(401).json({ error: 'This account no longer exists.' });
+  }
+  next();
+});
+
 const pool = (req) => poolFor(req.user.role);             // moderators -> app_user, admins -> app_admin
 const NOT_SEED = "description NOT LIKE '[seed]%'";
 
@@ -182,6 +193,20 @@ r.post('/users', requireRole('admin'), async (req, res) => {
      SELECT $1, roleId, $2, $3, $4 FROM roles WHERE userRole = $5`,
     [name, await bcrypt.hash(password, 10), encrypted, iv, b.role]);
   res.status(201).json({ message: 'Account created.' });
+});
+
+r.delete('/users/:id', requireRole('admin'), async (req, res) => {
+  const id = int(req.params.id);
+  if (id === req.user.userId) throw new HttpError(400, "You can't delete the account you are logged in with.");
+  try {
+    const { rowCount } = await pools.admin.query('DELETE FROM users WHERE userId = $1', [id]);
+    if (!rowCount) throw new HttpError(404, 'Account not found.');
+  } catch (e) {
+    // transactions keep a reference to the staff member who handled them
+    if (e.code === '23503') throw new HttpError(409, 'This account has handled deposits or claims, so it must stay in the history and cannot be deleted.');
+    throw e;
+  }
+  res.json({ message: 'Account deleted.' });
 });
 
 r.use('/demo', requireRole('admin'), demo);
